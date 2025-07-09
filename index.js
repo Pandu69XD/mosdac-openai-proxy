@@ -1,30 +1,34 @@
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const { Configuration, OpenAIApi } = require("openai");
+import { OpenAI } from "openai"; // For ESM (Node 18+)
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
 app.post("/chat", async (req, res) => {
+  const { message } = req.body;
+
   try {
-    const messages = req.body.messages || [];
-    const completion = await openai.createChatCompletion({
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages,
+      messages: [{ role: "user", content: message }]
     });
-    res.json(completion.data);
+
+    const bot = response.choices[0].message.content;
+    res.json({ response: bot });
   } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).json({ error: "OpenAI request failed" });
+    console.error("OpenAI Error:", error);
+    res.status(500).json({ error: "OpenAI error" });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server listening on port ${PORT}`));
+
